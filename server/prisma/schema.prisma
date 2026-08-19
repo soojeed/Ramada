@@ -1,0 +1,275 @@
+// Ramada Hotel System — Prisma 7 schema
+// Mapped 1:1 onto the original ASP.NET MVC / EntityFramework tables
+// (same table names, same columns, same relations) so the existing
+// Neon Postgres database structure stays intact.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Auth / Users
+// ─────────────────────────────────────────────────────────────────
+
+model Role {
+  roleId   Int    @id @default(autoincrement()) @map("RoleId")
+  roleName String @map("RoleName")
+
+  users User[]
+
+  @@map("Roles")
+}
+
+model User {
+  userId              Int      @id @default(autoincrement()) @map("UserId")
+  fullName             String?  @map("FullName")
+  username             String   @unique @map("Username")
+  passwordHash          String   @map("PasswordHash")
+  roleId               Int      @map("RoleId")
+  createdAt            DateTime @default(now()) @map("CreatedAt")
+  securityQuestion      String?  @map("SecurityQuestion")
+  securityAnswerHash    String?  @map("SecurityAnswerHash")
+  // CSV list of module keys a Cashier/limited user is allowed to access
+  allowedModules        String?  @map("AllowedModules")
+
+  role Role @relation(fields: [roleId], references: [roleId])
+
+  @@map("Users")
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Rooms
+// ─────────────────────────────────────────────────────────────────
+
+model RoomType {
+  roomTypeId    Int     @id @default(autoincrement()) @map("RoomTypeId")
+  typeName      String  @map("TypeName")
+  pricePerNight Decimal @map("PricePerNight") @db.Decimal(10, 2)
+  description   String? @map("Description")
+  maxOccupancy  Int     @map("MaxOccupancy")
+
+  rooms Room[]
+
+  @@map("RoomTypes")
+}
+
+model Room {
+  roomId            Int     @id @default(autoincrement()) @map("RoomId")
+  roomNumber        String  @map("RoomNumber")
+  roomTypeId        Int     @map("RoomTypeId")
+  floor             Int     @map("Floor")
+  status            String  @map("Status")
+  passportImagePath String? @map("PassportImagePath")
+
+  roomType     RoomType      @relation(fields: [roomTypeId], references: [roomTypeId])
+  bookings     Booking[]
+  reservations Reservation[]
+
+  @@map("Rooms")
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Guests / Reservations / Bookings
+// ─────────────────────────────────────────────────────────────────
+
+model Guest {
+  guestId           Int      @id @default(autoincrement()) @map("GuestId")
+  fullName          String?  @map("FullName")
+  phone             String?  @map("Phone")
+  email             String?  @map("Email")
+  gender            String?  @map("Gender")
+  address           String?  @map("Address")
+  createdAt         DateTime @default(now()) @map("CreatedAt")
+  passportImagePath String?  @map("PassportImagePath")
+
+  bookings     Booking[]
+  reservations Reservation[]
+  invoices     Invoice[]
+
+  @@map("Guests")
+}
+
+model Reservation {
+  reservationId Int      @id @default(autoincrement()) @map("ReservationId")
+  guestId       Int      @map("GuestId")
+  roomId        Int?     @map("RoomId")
+  checkInDate   DateTime @map("CheckInDate")
+  checkOutDate  DateTime @map("CheckOutDate")
+  status        String?  @map("Status")
+  createdAt     DateTime @default(now()) @map("CreatedAt")
+
+  guest    Guest     @relation(fields: [guestId], references: [guestId])
+  room     Room?     @relation(fields: [roomId], references: [roomId])
+  bookings Booking[]
+
+  @@map("Reservations")
+}
+
+model Booking {
+  bookingId       Int      @id @default(autoincrement()) @map("BookingId")
+  guestId         Int      @map("GuestId")
+  reservationId   Int?     @map("ReservationId")
+  roomId          Int      @map("RoomId")
+  checkInDate     DateTime @map("CheckInDate")
+  checkOutDate    DateTime @map("CheckOutDate")
+  totalAmount     Decimal  @default(0) @map("TotalAmount") @db.Decimal(10, 2)
+  discountPercent Decimal  @default(0) @map("DiscountPercent") @db.Decimal(10, 2)
+  discountAmount  Decimal  @default(0) @map("DiscountAmount") @db.Decimal(10, 2)
+  finalAmount     Decimal  @default(0) @map("FinalAmount") @db.Decimal(10, 2)
+  status          String?  @map("Status")
+
+  guest       Guest        @relation(fields: [guestId], references: [guestId])
+  room        Room         @relation(fields: [roomId], references: [roomId])
+  reservation Reservation? @relation(fields: [reservationId], references: [reservationId])
+  payments    Payment[]
+  foodOrders  FoodOrder[]
+  invoices    Invoice[]
+
+  @@map("Bookings")
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Food
+// ─────────────────────────────────────────────────────────────────
+
+model FoodItem {
+  itemId    Int     @id @default(autoincrement()) @map("ItemId")
+  itemName  String  @map("ItemName")
+  price     Decimal @map("Price") @db.Decimal(10, 2)
+  category  String? @map("Category")
+  imagePath String? @map("ImagePath")
+
+  orderItems FoodOrderItem[]
+
+  @@map("FoodItems")
+}
+
+model FoodOrder {
+  orderId            Int      @id @default(autoincrement()) @map("OrderId")
+  bookingId           Int?     @map("BookingId")
+  walkInCustomerName  String?  @map("WalkInCustomerName")
+  isPaid              Boolean  @default(false) @map("IsPaid")
+  totalPrice          Decimal  @default(0) @map("TotalPrice") @db.Decimal(10, 2)
+  orderDate           DateTime @default(now()) @map("OrderDate")
+
+  booking    Booking?        @relation(fields: [bookingId], references: [bookingId])
+  orderItems FoodOrderItem[]
+  payments   Payment[]
+
+  @@map("FoodOrders")
+}
+
+model FoodOrderItem {
+  foodOrderItemId Int     @id @default(autoincrement()) @map("FoodOrderItemId")
+  orderId         Int     @map("OrderId")
+  itemId          Int     @map("ItemId")
+  quantity        Int     @map("Quantity")
+  unitPrice       Decimal @map("UnitPrice") @db.Decimal(10, 2)
+  totalPrice      Decimal @map("TotalPrice") @db.Decimal(10, 2)
+
+  foodOrder FoodOrder @relation(fields: [orderId], references: [orderId], onDelete: Cascade)
+  foodItem  FoodItem  @relation(fields: [itemId], references: [itemId])
+
+  @@map("FoodOrderItems")
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Payments / Invoices / Finance
+// ─────────────────────────────────────────────────────────────────
+
+model Payment {
+  paymentId          Int      @id @default(autoincrement()) @map("PaymentId")
+  bookingId          Int?     @map("BookingId")
+  orderId            Int?     @map("OrderId")
+  walkInCustomerName String?  @map("WalkInCustomerName")
+  roomCharge         Decimal  @default(0) @map("RoomCharge") @db.Decimal(10, 2)
+  foodCharge         Decimal  @default(0) @map("FoodCharge") @db.Decimal(10, 2)
+  amount             Decimal  @default(0) @map("Amount") @db.Decimal(10, 2)
+  paymentMethod      String   @map("PaymentMethod")
+  paymentDate        DateTime @default(now()) @map("PaymentDate")
+  status             String?  @map("Status")
+  amountPaid         Decimal  @default(0) @map("AmountPaid") @db.Decimal(10, 2)
+  category           String?  @map("Category")
+
+  booking Booking?   @relation(fields: [bookingId], references: [bookingId])
+  order   FoodOrder? @relation(fields: [orderId], references: [orderId])
+
+  @@map("Payments")
+}
+
+model Invoice {
+  invoiceId          Int      @id @default(autoincrement()) @map("InvoiceId")
+  bookingId          Int?     @map("BookingId")
+  guestId            Int?     @map("GuestId")
+  walkInCustomerName String?  @map("WalkInCustomerName")
+  totalRoomCharge    Decimal  @default(0) @map("TotalRoomCharge") @db.Decimal(10, 2)
+  totalFoodCharge    Decimal  @default(0) @map("TotalFoodCharge") @db.Decimal(10, 2)
+  grandTotal         Decimal  @default(0) @map("GrandTotal") @db.Decimal(10, 2)
+  invoiceDate        DateTime @default(now()) @map("InvoiceDate")
+  isPaid             Boolean  @default(false) @map("IsPaid")
+
+  guest   Guest?   @relation(fields: [guestId], references: [guestId])
+  booking Booking? @relation(fields: [bookingId], references: [bookingId])
+
+  @@map("Invoices")
+}
+
+model Finance {
+  financeId       Int      @id @default(autoincrement()) @map("FinanceId")
+  description     String   @map("Description")
+  income          Decimal  @default(0) @map("Income") @db.Decimal(10, 2)
+  expense         Decimal  @default(0) @map("Expense") @db.Decimal(10, 2)
+  transactionDate DateTime @default(now()) @map("TransactionDate")
+  category        String?  @map("Category")
+  paymentId       Int?     @map("PaymentId")
+
+  @@map("Finance")
+}
+
+model Expense {
+  expenseId   Int      @id @default(autoincrement()) @map("ExpenseId")
+  title       String   @map("Title")
+  amount      Decimal  @map("Amount") @db.Decimal(10, 2)
+  category    String?  @map("Category")
+  expenseDate DateTime @default(now()) @map("ExpenseDate")
+  notes       String?  @map("Notes")
+
+  @@map("Expenses")
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Staff
+// ─────────────────────────────────────────────────────────────────
+
+model Staff {
+  staffId  Int      @id @default(autoincrement()) @map("StaffId")
+  fullName String   @map("FullName")
+  position String?  @map("Position")
+  phone    String?  @map("Phone")
+  gender   String?  @map("Gender")
+  salary   Decimal  @map("Salary") @db.Decimal(10, 2)
+  hireDate DateTime @map("HireDate")
+
+  salaryAdvances SalaryAdvance[]
+
+  @@map("Staffs")
+}
+
+model SalaryAdvance {
+  salaryAdvanceId Int      @id @default(autoincrement()) @map("SalaryAdvanceId")
+  staffId         Int      @map("StaffId")
+  amount          Decimal  @map("Amount") @db.Decimal(10, 2)
+  paymentType     String?  @map("PaymentType")
+  status          String?  @map("Status")
+  paymentDate     DateTime @default(now()) @map("PaymentDate")
+  notes           String?  @map("Notes")
+
+  staff Staff @relation(fields: [staffId], references: [staffId], onDelete: Cascade)
+
+  @@map("SalaryAdvances")
+}

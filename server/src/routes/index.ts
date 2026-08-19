@@ -1,0 +1,38 @@
+import { Router } from "express";
+import { authRouter } from "./auth.routes.js";
+import { usersRouter } from "./users.routes.js";
+import { rolesRouter } from "./roles.routes.js";
+import { roomTypesRouter } from "./roomTypes.routes.js";
+import { roomsRouter } from "./rooms.routes.js";
+import { guestsRouter } from "./guests.routes.js";
+import { reservationsRouter } from "./reservations.routes.js";
+import { bookingsRouter } from "./bookings.routes.js";
+import { foodItemsRouter } from "./foodItems.routes.js";
+import { foodOrdersRouter } from "./foodOrders.routes.js";
+import { paymentsRouter } from "./payments.routes.js";
+import { invoicesRouter } from "./invoices.routes.js";
+import { financeRouter } from "./finance.routes.js";
+import { expensesRouter } from "./expenses.routes.js";
+import { staffsRouter } from "./staffs.routes.js";
+import { dashboardRouter } from "./dashboard.routes.js";
+import { reportsRouter } from "./reports.routes.js";
+
+export const apiRouter = Router();
+
+apiRouter.use("/auth", authRouter);
+apiRouter.use("/users", usersRouter);
+apiRouter.use("/roles", rolesRouter);
+apiRouter.use("/room-types", roomTypesRouter);
+apiRouter.use("/rooms", roomsRouter);
+apiRouter.use("/guests", guestsRouter);
+apiRouter.use("/reservations", reservationsRouter);
+apiRouter.use("/bookings", bookingsRouter);
+apiRouter.use("/food-items", foodItemsRouter);
+apiRouter.use("/food-orders", foodOrdersRouter);
+apiRouter.use("/payments", paymentsRouter);
+apiRouter.use("/invoices", invoicesRouter);
+apiRouter.use("/finance", financeRouter);
+apiRouter.use("/expenses", expensesRouter);
+apiRouter.use("/staffs", staffsRouter);
+apiRouter.use("/dashboard", dashboardRouter);
+apiRouter.use("/reports", reportsRouter);
